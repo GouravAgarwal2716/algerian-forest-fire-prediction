@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Fire Prediction - ML Model</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">🔥 Forest Fire Weather Index Prediction</span>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        {% if not models_loaded %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong>Warning!</strong> ML models are not loaded. Please ensure the model files exist in the models folder.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card shadow-lg">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">Algerian Forest Fire Prediction Model</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="predictionForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="Region" class="form-label">Region <span class="badge bg-info">0-1</span></label>
+                                    <input type="number" class="form-control" id="Region" name="Region" min="0" max="1" step="1" placeholder="0 or 1" required>
+                                    <small class="form-text text-muted">Region code</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="Temperature" class="form-label">Temperature (°C)</label>
+                                    <input type="number" class="form-control" id="Temperature" name="Temperature" min="2" max="40" step="0.1" placeholder="e.g., 25" required>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="RH" class="form-label">Relative Humidity (%)</label>
+                                    <input type="number" class="form-control" id="RH" name="RH" min="15" max="100" step="1" placeholder="e.g., 60" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="Ws" class="form-label">Wind Speed (km/h)</label>
+                                    <input type="number" class="form-control" id="Ws" name="Ws" min="0" max="40" step="0.1" placeholder="e.g., 15" required>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="Rain" class="form-label">Rainfall (mm)</label>
+                                    <input type="number" class="form-control" id="Rain" name="Rain" min="0" max="100" step="0.1" placeholder="e.g., 0" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="FFMC" class="form-label">Fine Fuel Moisture Code</label>
+                                    <input type="number" class="form-control" id="FFMC" name="FFMC" min="0" max="100" step="0.1" placeholder="e.g., 50" required>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="DMC" class="form-label">Duff Moisture Code</label>
+                                    <input type="number" class="form-control" id="DMC" name="DMC" min="0" max="300" step="0.1" placeholder="e.g., 100" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="ISI" class="form-label">Initial Spread Index</label>
+                                    <input type="number" class="form-control" id="ISI" name="ISI" min="0" max="60" step="0.1" placeholder="e.g., 10" required>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg" id="predictBtn">
+                                    <span class="spinner-border spinner-border-sm d-none me-2" id="spinner" role="status" aria-hidden="true"></span>
+                                    Predict Fire Index
+                                </button>
+                            </div>
+                        </form>
+
+                        <div id="result" class="alert alert-success mt-4 d-none" role="alert">
+                            <h4 class="alert-heading">🔥 FWI Prediction Result</h4>
+                            <hr>
+                            <p id="resultText" class="mb-2 fs-5"></p>
+                            <p id="riskText" class="mb-0 fs-6 text-secondary"></p>
+                        </div>
+
+                        <div id="error" class="alert alert-danger mt-4 d-none" role="alert">
+                            <h5 class="alert-heading">Error</h5>
+                            <p id="errorText" class="mb-0"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Feature Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>FFMC (Fine Fuel Moisture Code):</strong> Represents moisture content of litter and other cured fine fuels. Range: 0-100</p>
+                        <p><strong>DMC (Duff Moisture Code):</strong> Represents moisture content of loosely compacted organic layers. Range: 0-300</p>
+                        <p><strong>ISI (Initial Spread Index):</strong> Indicates the intensity of fire spread. Range: 0-60</p>
+                        <p><strong>Temperature, RH, Ws, Rain:</strong> Standard meteorological observations</p>
+                        <p class="mb-0"><strong>Region:</strong> Geographic region code (0 or 1)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const spinner = document.getElementById('spinner');
+            const predictBtn = document.getElementById('predictBtn');
+            const resultDiv = document.getElementById('result');
+            const errorDiv = document.getElementById('error');
+            
+            // Show spinner
+            spinner.classList.remove('d-none');
+            predictBtn.disabled = true;
+            resultDiv.classList.add('d-none');
+            errorDiv.classList.add('d-none');
+            
+            try {
+                // Get form data
+                const formData = new FormData(document.getElementById('predictionForm'));
+                const data = Object.fromEntries(formData);
+                
+                // Send prediction request
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    document.getElementById('resultText').textContent = `Fire Weather Index (FWI): ${result.fwi_value}`;
+                    document.getElementById('riskText').textContent = `${result.risk_message}`;
+                    resultDiv.classList.remove('d-none');
+                } else {
+                    document.getElementById('errorText').textContent = result.error || 'Unknown error occurred';
+                    errorDiv.classList.remove('d-none');
+                }
+            } catch (error) {
+                document.getElementById('errorText').textContent = 'Error: ' + error.message;
+                errorDiv.classList.remove('d-none');
+            } finally {
+                // Hide spinner
+                spinner.classList.add('d-none');
+                predictBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
